@@ -1,235 +1,385 @@
-import tkinter as tk
-from tkinter import messagebox, simpledialog, filedialog
-import csv
-from PIL import Image, ImageTk
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+#!/usr/bin/python3
+from grade_book import GradeBook
+from datetime import datetime
+import re
+import time
+import os
 
-class Student:
-    def __init__(self, email, names, profile_picture=None):
-        self.email = email
-        self.names = names
-        self.courses_registered = []
-        self.GPA = 0.0
-        self.profile_picture = profile_picture
-    
-    def calculate_GPA(self):
-        if not self.courses_registered:
-            self.GPA = 0.0
-            return self.GPA
-        total_points = sum(course['grade'] * course['credits'] for course in self.courses_registered)
-        total_credits = sum(course['credits'] for course in self.courses_registered)
-        self.GPA = total_points / total_credits if total_credits != 0 else 0.0
-        return self.GPA
-    
-    def register_for_course(self, course, grade):
-        self.courses_registered.append({'name': course['name'], 'credits': course['credits'], 'grade': grade})
+BLUE = "\033[38;5;33m"
+RESET = "\033[0m"
 
-class Course:
-    def __init__(self, name, trimester, credits):
-        self.name = name
-        self.trimester = trimester
-        self.credits = credits
+def clear_screen():
+    os.system('cls' if os.name == 'nt' else 'clear')
 
-class GradeBook:
-    def __init__(self):
-        self.student_list = []
-        self.course_list = []
+def print_fancy_menu():
+    menu = [
+        "1. Add Student",
+        "2. Add Course",
+        "3. Register Student for Course",
+        "4. Calculate Ranking",
+        "5. Search by Grade",
+        "6. Generate Transcript",
+        "7. Exit"
+    ]
     
-    def add_student(self, email, names, profile_picture=None):
-        new_student = Student(email, names, profile_picture)
-        self.student_list.append(new_student)
+    print("\n" + "=" * 40)
+    print(f"{BLUE}        MENU OPTIONS{RESET}")
+    print("=" * 40)
     
-    def add_course(self, name, trimester, credits):
-        new_course = Course(name, trimester, credits)
-        self.course_list.append(new_course)
+    for item in menu:
+        print(f"║ {BLUE}{item:<36}{RESET} ║")
+        time.sleep(0.05)
     
-    def register_student_for_course(self, email, course_name, grade):
-        student = next((s for s in self.student_list if s.email == email), None)
-        course = next((c for c in self.course_list if c.name == course_name), None)
-        if student and course:
-            student.register_for_course({'name': course.name, 'credits': course.credits}, grade)
-    
-    def calculate_GPA(self, email):
-        student = next((s for s in self.student_list if s.email == email), None)
-        if student:
-            return student.calculate_GPA()
-        return None
-    
-    def calculate_ranking(self):
-        self.student_list.sort(key=lambda s: s.calculate_GPA(), reverse=True)
-        return [(s.email, s.GPA) for s in self.student_list]
-    
-    def search_by_grade(self, min_grade, max_grade):
-        filtered_students = []
-        for student in self.student_list:
-            for course in student.courses_registered:
-                if min_grade <= course['grade'] <= max_grade:
-                    filtered_students.append((student.email, course['name'], course['grade']))
-                    break
-        return filtered_students
-    
-    def generate_transcript(self, email):
-        student = next((s for s in self.student_list if s.email == email), None)
-        if student:
-            transcript = {
-                'email': student.email,
-                'names': student.names,
-                'GPA': student.calculate_GPA(),
-                'courses': student.courses_registered
-            }
-            return transcript
-        return None
-    
-    def save_to_file(self, filename):
-        with open(filename, 'w', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow(['Email', 'Names', 'Courses Registered', 'GPA'])
-            for student in self.student_list:
-                writer.writerow([student.email, student.names, student.courses_registered, student.GPA])
-
-class GradeBookApp:
-    def __init__(self, root):
-        self.grade_book = GradeBook()
-        self.root = root
-        self.root.title("ALU Grade Book Application")
-        self.root.configure(bg='white')
-        self.create_dashboard()
-
-    def create_dashboard(self):
-        self.clear_frame()
-        
-        frame = tk.Frame(self.root, bg='white')
-        frame.pack(pady=20, padx=20)
-        
-        tk.Label(frame, text="ALU Grade Book Dashboard", font=("Helvetica", 16, 'bold'), bg='white', fg='red').pack(pady=10)
-        
-        summary_frame = tk.Frame(frame, bg='white')
-        summary_frame.pack(pady=10)
-        
-        num_students = len(self.grade_book.student_list)
-        num_courses = len(self.grade_book.course_list)
-        avg_gpa = sum(student.calculate_GPA() for student in self.grade_book.student_list) / num_students if num_students > 0 else 0
-        
-        tk.Label(summary_frame, text=f"Number of Students: {num_students}", font=("Helvetica", 12), bg='white', fg='blue').grid(row=0, column=0, padx=20)
-        tk.Label(summary_frame, text=f"Number of Courses: {num_courses}", font=("Helvetica", 12), bg='white', fg='blue').grid(row=0, column=1, padx=20)
-        tk.Label(summary_frame, text=f"Average GPA: {avg_gpa:.2f}", font=("Helvetica", 12), bg='white', fg='blue').grid(row=0, column=2, padx=20)
-        
-        button_frame = tk.Frame(frame, bg='white')
-        button_frame.pack(pady=20)
-        
-        buttons = [
-            ("Add Student", self.add_student),
-            ("Add Course", self.add_course),
-            ("Register Student for Course", self.register_student_for_course),
-            ("Calculate GPA", self.calculate_GPA),
-            ("Calculate Ranking", self.calculate_ranking),
-            ("Search by Grade", self.search_by_grade),
-            ("Generate Transcript", self.generate_transcript),
-            ("Save to File", self.save_to_file),
-            ("View GPA Chart", self.view_gpa_chart),
-            ("Exit", self.root.quit)
-        ]
-        
-        for text, command in buttons:
-            button = tk.Button(button_frame, text=text, command=command, width=30, height=2, bg='red', fg='white')
-            button.pack(pady=5)
-    
-    def clear_frame(self):
-        for widget in self.root.winfo_children():
-            widget.destroy()
-    
-    def add_student(self):
-        email = simpledialog.askstring("Input", "Enter student email:")
-        names = simpledialog.askstring("Input", "Enter student names:")
-        profile_picture = filedialog.askopenfilename(title="Select Profile Picture", filetypes=[("Image Files", "*.png;*.jpg;*.jpeg")])
-        profile_image = Image.open(profile_picture)
-        profile_image.thumbnail((100, 100))
-        profile_image.save(f"images/{email}.png")
-        self.grade_book.add_student(email, names, profile_picture=f"images/{email}.png")
-        messagebox.showinfo("Info", "Student added successfully.")
-    
-    def add_course(self):
-        name = simpledialog.askstring("Input", "Enter course name:")
-        trimester = simpledialog.askstring("Input", "Enter trimester:")
-        credits = simpledialog.askinteger("Input", "Enter course credits:")
-        self.grade_book.add_course(name, trimester, credits)
-        messagebox.showinfo("Info", "Course added successfully.")
-    
-    def register_student_for_course(self):
-        email = simpledialog.askstring("Input", "Enter student email:")
-        course_name = simpledialog.askstring("Input", "Enter course name:")
-        grade = simpledialog.askfloat("Input", "Enter grade:")
-        self.grade_book.register_student_for_course(email, course_name, grade)
-        messagebox.showinfo("Info", "Student registered for course successfully.")
-    
-    def calculate_GPA(self):
-        email = simpledialog.askstring("Input", "Enter student email:")
-        gpa = self.grade_book.calculate_GPA(email)
-        if gpa is not None:
-            messagebox.showinfo("Info", f"GPA for {email}: {gpa}")
-        else:
-            messagebox.showerror("Error", "Student not found.")
-    
-    def calculate_ranking(self):
-        ranking = self.grade_book.calculate_ranking()
-        result = "Student Ranking by GPA:\n"
-        for rank, (email, gpa) in enumerate(ranking, start=1):
-            result += f"{rank}. {email} - GPA: {gpa}\n"
-        messagebox.showinfo("Ranking", result)
-    
-    def search_by_grade(self):
-        min_grade = simpledialog.askfloat("Input", "Enter minimum grade:")
-        max_grade = simpledialog.askfloat("Input", "Enter maximum grade:")
-        results = self.grade_book.search_by_grade(min_grade, max_grade)
-        result = "Students with grades in range:\n"
-        for email, course_name, grade in results:
-            result += f"{email} - {course_name}: {grade}\n"
-        messagebox.showinfo("Search Results", result)
-    
-    def generate_transcript(self):
-        email = simpledialog.askstring("Input", "Enter student email:")
-        transcript = self.grade_book.generate_transcript(email)
-        if transcript:
-            result = f"Transcript for {email}:\n"
-            result += f"Names: {transcript['names']}\n"
-            result += f"GPA: {transcript['GPA']}\n"
-            result += "Courses Registered:\n"
-            for course in transcript['courses']:
-                result += f"  - {course['name']}: {course['grade']} (Credits: {course['credits']})\n"
-            messagebox.showinfo("Transcript", result)
-        else:
-            messagebox.showerror("Error", "Student not found.")
-    
-    def save_to_file(self):
-        filename = simpledialog.askstring("Input", "Enter filename to save:")
-        self.grade_book.save_to_file(filename)
-        messagebox.showinfo("Info", "Data saved to file.")
-    
-    def view_gpa_chart(self):
-        students = self.grade_book.student_list
-        if not students:
-            messagebox.showinfo("Info", "No students available to display GPA chart.")
-            return
-
-        emails = [student.email for student in students]
-        gpas = [student.calculate_GPA() for student in students]
-
-        fig, ax = plt.subplots()
-        ax.barh(emails, gpas, color='skyblue')
-        ax.set_xlabel('GPA')
-        ax.set_title('Student GPA Chart')
-
-        chart_window = tk.Toplevel(self.root)
-        chart_window.title("GPA Chart")
-        canvas = FigureCanvasTkAgg(fig, master=chart_window)
-        canvas.draw()
-        canvas.get_tk_widget().pack()
+    print("=" * 40)
 
 def main():
-    root = tk.Tk()
-    app = GradeBookApp(root)
-    root.mainloop()
+    grade_book = GradeBook()
+
+    while True:
+        print_fancy_menu()
+
+        choice = input("\nEnter your choice: ")
+
+        if choice == '1':
+            while True:
+                email = input("\nEnter student's email:")
+                if not email:
+                    print("\033[91mEmail is required!\033[0m\n")
+                elif grade_book.get_student_by_email(email):
+                    print("\033[91mEmail already exists!\033[0m\n")
+                elif not email.endswith("@alustudent.com"):
+                    print("\033[91mInvalid Email please Enter ALU's email!\033[0m\n")
+                else:
+                    break
+            
+            while True:
+                names = input("\nEnter student's names: ")
+                if not names:
+                    print("\033[91mNames are required!\033[0m")
+                    continue
+                if not re.match(r'^[a-zA-Z\s]+$', names):
+                    print("\033[91mEnter A Valid Name!\033[0m")
+                    continue
+                break
+
+            while True:
+                year = input("Enter student's year of enrollment: ")
+                if year and not year.isdigit():
+                    print("\033[91mYear should be a number!\033[0m")
+                elif not year:
+                    year = datetime.now().year
+                    break
+                else:
+                    year = int(year)
+                    break
+    
+            while True:
+                unique_id = input("Enter student's ID: ")
+                if not unique_id:
+                    print("\033[91mID is required!\033[0m")
+                    continue
+                elif not unique_id.isdigit():
+                    print("\033[91mID should be a number!\033[0m")
+                    continue 
+
+                if len(unique_id) < 4:
+                    full_id = "0" * (4 - len(unique_id)) + unique_id
+                    break
+                elif len(unique_id) > 4:
+                    print("\033[91mID should be 4 characters long!\033[0m")
+                else:
+                    full_id = unique_id
+                    break
+
+            id = f"ALU{full_id}{year}"
+            grade_book.add_student(email, names, id)
+
+        elif choice == '2':
+            while True:
+                name = input("Enter course name: ")
+                if not name:
+                    print("\033[91mCourse name is required!\033[0m")
+                    continue
+                if not re.match(r'^[a-zA-Z\s]+$', name):
+                    print("\033[91mEnter A Valid Name of Course!\033[0m")
+                    continue
+                courses_list = []
+                with open("./data/courses.txt", "r") as courses:
+                    for line in courses:
+                        if len(line.strip().split(",")) == 3:
+                            course_name, trimester, credits = line.strip().split(",")
+                            courses_list.append(course_name)
+                    if not name:
+                        print("\033[91mCourse name is required!\033[0m")
+                    elif name in courses_list:
+                        print("\033[91mCourse already exists!\033[0m")
+                    else:
+                        break
+            
+            trimesters = ["1st", "2nd", "3rd"]
+            while True:
+                trimester = input("Enter trimester(1st, 2nd, 3rd): ")
+                if not trimester:
+                    print("\033[91mTrimester is required!\033[0m")
+                    continue
+                elif trimester not in trimesters:
+                    print("\033[91mInvalid trimester! Choose from 1st, 2nd, or 3rd.\033[0m")
+                    continue
+                else:
+                    break
+            while True:
+                
+                credits = (input("Enter course credits: "))
+                if not credits:
+                    print("\033[91mCredits are required!\033[0m")
+                    continue
+                elif re.match("^[0-9]*$", credits) == None:
+                    print("\033[91mCredits must be an integer/float and greater than 0!\033[0m")
+                    continue
+                else:
+                    break
+            grade_book.add_course(name, trimester, credits)
+
+        elif choice == '3':
+            while True:
+                student_email = input("Enter student's email: ")
+            
+                if not student_email:
+                    print("\033[91mEmail is required!\033[0m")
+                else:
+                    student_emails = []
+                    found = False
+                    with open("./data/students.txt", "r") as file:
+                        for line in file:
+                            if len(line.strip().split(",")) == 3:
+                                email, names, id = line.strip().split(",")
+                                student_emails.append(email)
+                                if student_email == email:
+                                    print(f"\033[92mStudent Found: ({names} ID: {id})\033[0m")
+                                    found = True
+                                    break
+            
+                    if not found:
+                        print("\033[91mStudent not found!\033[0m")
+                    else:
+                        break
+            
+            while True:
+                course_name_input = input("Enter course name: ")
+                if not course_name_input:
+                    print("\033[91mCourse name is required!\033[0m")
+                    continue
+            
+                found = False
+                existing_courses = []
+            
+                with open("./data/courses.txt", "r") as file:
+                    for line in file:
+                        if len(line.strip().split(",")) == 3:
+                            name, trimester, credits = line.strip().split(",")
+                            existing_courses.append(name)
+                            if course_name_input == name:
+                                print(f"\033[92mCourse Found: {name} (Trimester: {trimester}, Credits: {credits})\033[0m")
+                                found = True
+            
+                if not found:
+                    print("\033[91mCourse not found!\033[0m")
+                    print("Choose from already existing courses:")
+                    for course in existing_courses:
+                        print(f"\033[93m{course}\033[0m")
+                    continue
+            
+                already_registered = False
+                with open("./data/registered_courses.txt", "r") as file:
+                    for line in file:
+                        if len(line.strip().split(",")) == 3:
+                            registered_email, registered_course_name, _ = line.strip().split(",")
+                            if student_email == registered_email and course_name_input == registered_course_name:
+                                print("\033[91mYou are already registered for this course. Please choose another course.\033[0m")
+                                already_registered = True
+                                break
+            
+                if not already_registered:
+                    break
+        
+            while True:
+                score = input("Enter grade (n/m): ")
+                if not score:
+                    print("\033[91mGrade is required!\033[0m")
+                elif not re.match(r'^\d+/\d+$', score):
+                    print("\033[91mInvalid grade format! Use n/m format.\033[0m")
+                else:
+                    try:
+                        grade, highest_score = map(float, score.split('/'))
+                        if grade > highest_score:
+                            print("\033[91mInvalid grade! The obtained score cannot be greater than the highest possible score.\033[0m")
+                        else:
+                            normalized_grade = (grade / highest_score) * 4.0
+                            print(f"\033[92mNormalized grade: {normalized_grade:.2f}\033[0m")
+                            break
+                    except ValueError:
+                        print("\033[91mInvalid grade format! Use n/m format.\033[0m")
+                
+            grade_book.register_student_for_course(student_email, course_name_input, normalized_grade)
+
+        elif choice == '4':
+            ranking = grade_book.calculate_ranking()
+            number = 1
+            print(f"\n----------{BLUE}Ranking{RESET}-------------\n")
+            for names, GPA in ranking:
+                print(f"{number}.{names}: {GPA:.2f}\n")
+                number += 1
+
+        elif choice == '5':
+            while True:
+                course_name = input("Enter course name: ")
+                if not course_name:
+                    print("\033[91mCourse name is required!\033[0m")
+                    continue
+
+                found = False
+                existing_courses = []
+
+                with open("./data/courses.txt", "r") as file:
+                    for line in file:
+                        if len(line.strip().split(",")) == 3:
+                            name, trimester, credits = line.strip().split(",")
+                            existing_courses.append(name)
+                            if course_name == name:
+                                print(f"\033[92mCourse Found: {name} (Trimester: {trimester}, Credits: {credits})\033[0m")
+                                found = True
+                                break
+
+                    if not found:
+                        print("\033[91mCourse not found!\033[0m")
+                        print("Choose from already existing courses:")
+                        for course in existing_courses:
+                            print(course)
+                            continue
+
+                if found:
+                    break
+
+            while True:
+                min_grade = input("Enter minimum grade: ")
+                if not min_grade:
+                    print("\033[91mMinimum grade is required!\033[0m")
+                else:
+                    try:
+                        min_grade = float(min_grade)
+                        break
+                    except ValueError:
+                        raise ValueError("\033[91mThe grade must be an integer or a float!\033[0m")
+            
+            while True:
+                max_grade = input("Enter maximum grade: ")
+                if not max_grade:
+                    print("\033[91mMaximum grade is required!\033[0m")
+                else:
+                    try:
+                        max_grade = float(max_grade)
+                        break
+                    except ValueError:
+                        raise ValueError("\033[91mThe grade must be an integer or a float!\033[0m")
+            results = grade_book.search_by_grade(course_name, (min_grade, max_grade))
+            print("\nSearch Results:")
+            for names, grade in results:
+                print(f"{names}: {grade}")
+
+        elif choice == '6':
+            while True:
+                student_email = input("Enter student's email: ")
+                if not student_email:
+                    print("\033[91mEmail is required!\033[0m")
+                else:
+                    student_emails = []
+                    found = False
+                    with open("./data/students.txt", "r") as file:
+                        for line in file:
+                            if len(line.strip().split(",")) == 3:
+                                email, names, id = line.strip().split(",")
+                                student_emails.append(email)
+                                if student_email == email:
+                                    print(f"\033[92mStudent Found: ({names} ID: {id})\033[0m")
+                                    found = True
+                                    break
+
+                    if not found:
+                        print("\033[91mStudent not found!\033[0m")
+                    else:
+                        break
+
+            transcript = grade_book.generate_transcript(student_email)
+            if transcript:
+                print("\n")
+                print(f"{BLUE}                 STUDENT TRANSCRIPT{RESET}")
+                print("=" * 60 + "\n")
+                print(f"{BLUE}Student's Names{RESET}: {transcript['names']}")
+                print(f"{BLUE}ID{RESET}: {id}")
+                print(f"{BLUE}Email{RESET}: {transcript['email']}")
+                print("\n" + "=" * 60)
+                print(f"{BLUE}Courses and Grades{RESET}")
+                print("=" * 60 + "\n")
+                
+                max_name_length = max(len(course) for course, _ in transcript['courses'])
+                max_grade_length = max(len(f"{grade:.2f}") for _, grade in transcript['courses'])
+                max_name_length = max(max_name_length, len("Course"))
+                max_grade_length = max(max_grade_length, len("Grade"))
+                
+                print(f"{'Course':<{max_name_length}} | {'Grade':<{max_grade_length}}")
+                print("-" * (max_name_length + max_grade_length + 3))
+                
+                for course, grade in transcript['courses']:
+                    grade_str = f"{grade:.2f}"
+                    print(f"{course:<{max_name_length}} | {grade_str:<{max_grade_length}}")
+                    print("-" * (max_name_length + max_grade_length + 3))
+                
+                print(f"\n{BLUE}GPA{RESET}: {transcript['GPA']:.2f}")
+                print("=" * 60 + "\n")
+
+                while True:
+                    choice = input("Do you want to save the transcript to a file (yes/no)? ")
+                    if choice.lower() == 'yes':
+                        with open("./data/students.txt", "r") as st:
+                            for line in st:
+                                if len(line.strip().split(",")) == 3:
+                                    email, names, id = line.strip().split(",")
+                                    if student_email == email:
+                                        transcript['names'] = names
+                                        break
+                        with open(f"{transcript['names']}_transcript.txt", "w") as file:
+                            file.write("="*60 + "\n")
+                            file.write(f"{' '*25}STUDENT TRANSCRIPT{' '*25}\n")
+                            file.write("="*60 + "\n\n")
+                            file.write(f"Names: {transcript['names']}\n")
+                            file.write(f"ID: {id}\n")
+                            file.write(f"Email: {transcript['email']}\n")
+                            file.write("\n")
+                            file.write("=" * 60 + "\n")
+                            file.write(f"Courses and Grades\n")
+                            file.write("=" * 60 + "\n")
+                            file.write(f"{'Course':<{max_name_length}} | {'Grade':<{max_grade_length}}\n")
+                            file.write("-" * (max_name_length + max_grade_length + 3) + "\n")
+                            for course, grade in transcript['courses']:
+                                grade_str = f"{grade:.2f}"
+                                file.write(f"{course:<{max_name_length}} | {grade_str:<{max_grade_length}}\n")
+                                file.write("-" * (max_name_length + max_grade_length + 3) + "\n")
+                            file.write(f"\nGPA: {transcript['GPA']:.2f}\n")
+                            file.write("=" * 60 + "\n")
+                        print("\033[92mTranscript saved successfully!\033[0m")
+                        break
+                    elif choice.lower() == 'no':
+                        break
+                    else:
+                        print("\033[91mInvalid choice! Please enter 'yes' or 'no'.\033[0m")
+            else:
+                print("Student not found!")
+
+        elif choice == '7':
+            break
+
+        else:
+            print("\033[91mInvalid choice. Please try again.\033[0m")
 
 if __name__ == "__main__":
     main()
