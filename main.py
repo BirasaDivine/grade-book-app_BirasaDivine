@@ -47,8 +47,8 @@ def main():
                     print("\033[91mEmail is required!\033[0m\n")
                 elif grade_book.get_student_by_email(email):
                     print("\033[91mEmail already exists!\033[0m\n")
-                elif not email.endswith("@alustudent.com"):
-                    print("\033[91mInvalid Email please Enter ALU's email!\033[0m\n")
+                elif not email.endswith("@gmail.com"):
+                    print("\033[91mInvalid Email!\033[0m\n")
                 else:
                     break
             
@@ -91,7 +91,7 @@ def main():
                     full_id = unique_id
                     break
 
-            id = f"ALU{full_id}{year}"
+            id = f"ST{full_id}{year}"
             grade_book.add_student(email, names, id)
 
         elif choice == '2':
@@ -109,21 +109,21 @@ def main():
                         if len(line.strip().split(",")) == 3:
                             course_name, trimester, credits = line.strip().split(",")
                             courses_list.append(course_name)
-                    if not name:
-                        print("\033[91mCourse name is required!\033[0m")
-                    elif name in courses_list:
+                  #  if not name:
+                   #     print("\033[91mCourse name is required!\033[0m")
+                    if name in courses_list:
                         print("\033[91mCourse already exists!\033[0m")
                     else:
                         break
             
-            trimesters = ["1st", "2nd", "3rd"]
+            trimesters = ["First", "Second", "Third"]
             while True:
-                trimester = input("Enter trimester(1st, 2nd, 3rd): ")
+                trimester = input("Enter trimester(First,Second,Third ): ")
                 if not trimester:
                     print("\033[91mTrimester is required!\033[0m")
                     continue
                 elif trimester not in trimesters:
-                    print("\033[91mInvalid trimester! Choose from 1st, 2nd, or 3rd.\033[0m")
+                    print("\033[91mInvalid trimester! Choose from First, Second, or Third.\033[0m")
                     continue
                 else:
                     break
@@ -203,16 +203,16 @@ def main():
                     break
         
             while True:
-                score = input("Enter grade (n/m): ")
+                score = input("Enter grade (Optained/Total): ")
                 if not score:
                     print("\033[91mGrade is required!\033[0m")
                 elif not re.match(r'^\d+/\d+$', score):
-                    print("\033[91mInvalid grade format! Use n/m format.\033[0m")
+                    print("\033[91mInvalid grade! Use Optained/Total format.\033[0m")
                 else:
                     try:
                         grade, highest_score = map(float, score.split('/'))
                         if grade > highest_score:
-                            print("\033[91mInvalid grade! The obtained score cannot be greater than the highest possible score.\033[0m")
+                            print("\033[91mInvalid grade!\033[0m")
                         else:
                             normalized_grade = (grade / highest_score) * 4.0
                             print(f"\033[92mNormalized grade: {normalized_grade:.2f}\033[0m")
@@ -282,7 +282,7 @@ def main():
                     except ValueError:
                         raise ValueError("\033[91mThe grade must be an integer or a float!\033[0m")
             results = grade_book.search_by_grade(course_name, (min_grade, max_grade))
-            print("\nSearch Results:")
+            print("\nResults:")
             for names, grade in results:
                 print(f"{names}: {grade}")
 
@@ -336,42 +336,6 @@ def main():
                 
                 print(f"\n{BLUE}GPA{RESET}: {transcript['GPA']:.2f}")
                 print("=" * 60 + "\n")
-
-                while True:
-                    choice = input("Do you want to save the transcript to a file (yes/no)? ")
-                    if choice.lower() == 'yes':
-                        with open("./data/students.txt", "r") as st:
-                            for line in st:
-                                if len(line.strip().split(",")) == 3:
-                                    email, names, id = line.strip().split(",")
-                                    if student_email == email:
-                                        transcript['names'] = names
-                                        break
-                        with open(f"{transcript['names']}_transcript.txt", "w") as file:
-                            file.write("="*60 + "\n")
-                            file.write(f"{' '*25}STUDENT TRANSCRIPT{' '*25}\n")
-                            file.write("="*60 + "\n\n")
-                            file.write(f"Names: {transcript['names']}\n")
-                            file.write(f"ID: {id}\n")
-                            file.write(f"Email: {transcript['email']}\n")
-                            file.write("\n")
-                            file.write("=" * 60 + "\n")
-                            file.write(f"Courses and Grades\n")
-                            file.write("=" * 60 + "\n")
-                            file.write(f"{'Course':<{max_name_length}} | {'Grade':<{max_grade_length}}\n")
-                            file.write("-" * (max_name_length + max_grade_length + 3) + "\n")
-                            for course, grade in transcript['courses']:
-                                grade_str = f"{grade:.2f}"
-                                file.write(f"{course:<{max_name_length}} | {grade_str:<{max_grade_length}}\n")
-                                file.write("-" * (max_name_length + max_grade_length + 3) + "\n")
-                            file.write(f"\nGPA: {transcript['GPA']:.2f}\n")
-                            file.write("=" * 60 + "\n")
-                        print("\033[92mTranscript saved successfully!\033[0m")
-                        break
-                    elif choice.lower() == 'no':
-                        break
-                    else:
-                        print("\033[91mInvalid choice! Please enter 'yes' or 'no'.\033[0m")
             else:
                 print("Student not found!")
 
