@@ -1,3 +1,5 @@
 b.divine@alustudent.com,elab,3.9
 b.divine@alustudent.com,Elab,1.0
 b.divine@gmail.com,Elab,3.2
+karenganire@gmail.com,Databases,1.6
+karenganire@gmail.com,Elab,2.4

@@ -215,7 +215,7 @@ def main():
                             print("\033[91mInvalid grade!\033[0m")
                         else:
                             normalized_grade = (grade / highest_score) * 4.0
-                            print(f"\033[92mNormalized grade: {normalized_grade:.2f}\033[0m")
+                            print(f"\033[92mGrade on GPA: {normalized_grade:.2f}\033[0m")
                             break
                     except ValueError:
                         print("\033[91mInvalid grade format! Use n/m format.\033[0m")
@@ -261,9 +261,9 @@ def main():
                     break
 
             while True:
-                min_grade = input("Enter minimum grade: ")
+                min_grade = input("Enter the first range of the grade: ")
                 if not min_grade:
-                    print("\033[91mMinimum grade is required!\033[0m")
+                    print("\033[91mFirst range  is required!\033[0m")
                 else:
                     try:
                         min_grade = float(min_grade)
@@ -272,9 +272,9 @@ def main():
                         raise ValueError("\033[91mThe grade must be an integer or a float!\033[0m")
             
             while True:
-                max_grade = input("Enter maximum grade: ")
+                max_grade = input("Enter the last range of the grade: ")
                 if not max_grade:
-                    print("\033[91mMaximum grade is required!\033[0m")
+                    print("\033[91mLast range!\033[0m")
                 else:
                     try:
                         max_grade = float(max_grade)
@@ -282,7 +282,7 @@ def main():
                     except ValueError:
                         raise ValueError("\033[91mThe grade must be an integer or a float!\033[0m")
             results = grade_book.search_by_grade(course_name, (min_grade, max_grade))
-            print("\nResults:")
+            print("\nStudents in Range:")
             for names, grade in results:
                 print(f"{names}: {grade}")
 
